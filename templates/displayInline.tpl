@@ -1,4 +1,2 @@
-<div class="item html_file">
-	<div class="title">{translate key="plugins.generic.inlineHtmlOmp.divTitle"}</div>
-	<div class="value">{$fileBody nofilter} test</div>
-</div>
+<button onclick="history.back()">{translate key="plugins.generic.inlineHtmlOmp.buttonValue"}</button>
+

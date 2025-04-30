@@ -27,12 +27,12 @@
     use PKP\plugins\Hook;
     use PKP\submissionFile\SubmissionFile;
     use PKP\config\Config;
+    use APP\observers\events\UsageEvent;
     use APP\plugins\generic\htmlMonographFile\HtmlMonographFilePlugin;
 use Error;
 
 class InlineHtmlOmpPlugin extends HtmlMonographFilePlugin {
 
-    private $htmlBody = null;
 
     /**
      * @copydoc Plugin::register()
@@ -43,8 +43,7 @@ class InlineHtmlOmpPlugin extends HtmlMonographFilePlugin {
     {
         if (parent::register($category, $path, $mainContextId)) {
             if ($this->getEnabled($mainContextId)) {
-                Hook::add('CatalogBookHandler::view', [$this, 'viewCallback']);
-                Hook::add('Templates::Catalog::Book::Main',[$this, 'addHtml']);
+                Hook::add('CatalogBookHandler::view', [$this, 'viewCallback'],HOOK_SEQUENCE_NORMAL);
             }
             return true;
         }
@@ -82,44 +81,34 @@ class InlineHtmlOmpPlugin extends HtmlMonographFilePlugin {
 
 
 public function viewCallback($hookName, $args) {
-
-    if($hookName == "CatalogBookHandler::view"){
+       
         $request = Application::get()->getRequest();
         $submission =& $args[1];        
         $publicationFormat =& $args[2];
         $submissionFile =& $args[3];
-        $submissionId = $submission->getId();
-        $contextId = $submission->getContextId();
-        $mimetype = $submissionFile->getData('mimetype');
+        // $inline =& $args[4];
+        // $submissionId = $submission->getId();
+        // $contextId = $submission->getContextId();
+        
+        $templateMgr = TemplateManager::getManager($request);
+        $body = $this->loadHtmlBody($request,$submission,$publicationFormat,$submissionFile);
 
-        if($submissionFile && $mimetype==="text/html"){
-            $filePublication = null;
-            foreach ($submission->getData('publications') as $publication) {
-                if ($publication->getId() === $publicationFormat->getData('publicationId')) {
-                    $filePublication = $publication;
-                    break;
-                }
-            }
-            $templateMgr = TemplateManager::getManager($request);
-            $body = $this->loadHtmlBody($request,$submission,$publicationFormat,$submissionFile);
-            $templateMgr->assign('fileBody',$body);
-
-        }
+        $templateMgr->assign('fileBody',$body);
+        $templateMgr->display($this->getTemplateResource("displayInline.tpl"));
         return false;
     }
    
 
-}
 
-// TODO check htmlBody assignment
+
 
     private function loadHtmlBody($request, $submission, $publicationFormat, $submissionFile) {
         $html = parent::_getHTMLContents($request, $submission, $publicationFormat, $submissionFile);
         $doc = new DOMDocument();
         libxml_use_internal_errors(true);
-
+        
         $doc->loadHTML($html);
-
+        
         $body = '';
         if ($doc->getElementsByTagName('body')->length) {
             $bodyElement = $doc->getElementsByTagName('body')->item(0);
@@ -127,24 +116,10 @@ public function viewCallback($hookName, $args) {
                 $body .= $doc->saveHTML($childNode);
             }
         }
-
-        $this->htmlBody = $body;
+        
+        return $body;
 }
 
-    public function addHtml($hookName, $args){
-      $request = Application::get()->getRequest();
-
-      error_log('Valor de htmlBody: ' . var_export($this->htmlBody, true));
-
-      if(!$this->htmlBody) return false;
-      $templateMgr =& TemplateManager::getManager($request);
-      $output =& $args[2];
-      
-      $templateMgr->assign('fileBody',$this->htmlBody);
-
-      $output .= $templateMgr->fetch($this->getTemplateResource('displayInline.tpl'));
-
-        return true;
-    }
+    
 }
         

@@ -16,3 +16,6 @@ msgstr "HTML Monograph File Inline Display"
 
 msgid "plugins.generic.inlineHtmlOmp.description"
 msgstr "This plugin provides rendering support for HTML Monograph Files inline."
+
+msgid "plugins.generic.inlineHtmlOmp.buttonValue"
+msgstr "Go back"
