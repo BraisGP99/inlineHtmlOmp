@@ -1,7 +1,7 @@
 ## Description
 
-A plugin that embeds HTML content from files to inline in OMP monographs - 
+A plugin that displays html content without the iframe tag for better accesibility
 
-## TODO 
+## TODO
 
-Implement inline integration and manipulate templates correctly 
+Implement adecuate template displaying
