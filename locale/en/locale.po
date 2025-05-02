@@ -19,3 +19,6 @@ msgstr "This plugin provides rendering support for HTML Monograph Files inline."
 
 msgid "plugins.generic.inlineHtmlOmp.buttonValue"
 msgstr "Go back"
+
+msgid "plugins.generic.inlineHtmlOmp.buttonAria"
+msgstr "Button to go back to monograph details"

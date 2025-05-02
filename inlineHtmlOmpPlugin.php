@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2014-2022 Simon Fraser University
  * Copyright (c) 2003-2022 John Willinsky
- * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ * Distributed under the GNU GPL v3. For full terms see the file htmls/COPYING.
  *
  * @class InlineHtmlOmpPlugin
  *
@@ -14,39 +14,27 @@
     namespace APP\plugins\generic\inlineHtmlOmp;
 
     use APP\core\Application;
-    use DAORegistry;
-    use APP\core\Request;
-    use APP\core\Services;
-    use APP\facades\Repo;
-    use APP\file\PublicFileManager;
-    use APP\publication\Publication;
-    use APP\publicationFormat\PublicationFormat;
-    use APP\submission\Submission;
     use APP\template\TemplateManager;
-    use DOMDocument;
+    use DOMdocument;
     use PKP\plugins\Hook;
-    use PKP\submissionFile\SubmissionFile;
-    use PKP\config\Config;
-    use APP\observers\events\UsageEvent;
-    use APP\plugins\generic\htmlMonographFile\HtmlMonographFilePlugin;
-use Error;
+    use APP\plugins\generic\htmlMonographFile\htmlMonographFilePlugin;
 
-class InlineHtmlOmpPlugin extends HtmlMonographFilePlugin {
+class InlineHtmlOmpPlugin extends htmlMonographFilePlugin {
 
 
     /**
-     * @copydoc Plugin::register()
+     * @copyhtml Plugin::register()
      *
      * @param null|mixed $mainContextId
      */
     public function register($category, $path, $mainContextId = null)
     {
-        if (parent::register($category, $path, $mainContextId)) {
-            if ($this->getEnabled($mainContextId)) {
-                Hook::add('CatalogBookHandler::view', [$this, 'viewCallback'],HOOK_SEQUENCE_NORMAL);
-            }
-            return true;
+        $success = parent::register($category, $path, $mainContextId); 
+        if (!$success) return false; 
+        if ($success && $this->getEnabled()) {
+                Hook::add('CatalogBookHandler::view', [$this, 'viewCallback']);
         }
+         
         return false;
     }
 
@@ -86,40 +74,40 @@ public function viewCallback($hookName, $args) {
         $submission =& $args[1];        
         $publicationFormat =& $args[2];
         $submissionFile =& $args[3];
-        // $inline =& $args[4];
-        // $submissionId = $submission->getId();
-        // $contextId = $submission->getContextId();
-        
-        $templateMgr = TemplateManager::getManager($request);
-        $body = $this->loadHtmlBody($request,$submission,$publicationFormat,$submissionFile);
+        $inline =& $args[4];
+        $mimetype = $submissionFile->getData('mimetype');
+        if($mimetype=="text/html"){
+            $templateMgr = TemplateManager::getManager($request);
+            $html = parent::_getHTMLContents($request, $submission, $publicationFormat, $submissionFile);
+            error_log($html);
+            $htmlNonJs = $this->_checkScript($html,$templateMgr);
 
-        $templateMgr->assign('fileBody',$body);
-        $templateMgr->display($this->getTemplateResource("displayInline.tpl"));
-        return false;
+
+            $templateMgr->assign('fileHtml', $htmlNonJs);
+            $templateMgr->display($this->getTemplateResource('displayInline.tpl'));
+        }
+
+        return true;
     }
    
 
-
-
-
-    private function loadHtmlBody($request, $submission, $publicationFormat, $submissionFile) {
-        $html = parent::_getHTMLContents($request, $submission, $publicationFormat, $submissionFile);
+    private function _checkScript($html){
+        
         $doc = new DOMDocument();
         libxml_use_internal_errors(true);
-        
-        $doc->loadHTML($html);
-        
-        $body = '';
-        if ($doc->getElementsByTagName('body')->length) {
-            $bodyElement = $doc->getElementsByTagName('body')->item(0);
-            foreach ($bodyElement->childNodes as $childNode) {
-                $body .= $doc->saveHTML($childNode);
-            }
+        $doc->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+        $scripts = $doc->getElementsByTagName('script');
+
+        for ($i = $scripts->length - 1; $i >= 0; $i--) {
+            $script = $scripts->item($i);
+            $outerHTML = $doc->saveHTML($script);
+            $comentario = $doc
+            ->createComment($outerHTML);
+            $script->parentNode->replaceChild($comentario, $script);
         }
-        
-        return $body;
+
+            return $doc->saveHTML();
+    }
 }
 
-    
-}
-        
